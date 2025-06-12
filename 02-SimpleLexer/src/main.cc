@@ -17,9 +17,17 @@ int main()
     {
         lexer.setInput(input);
         std::cout << '`' << input << "`: " << std::endl;
-        while (Token token = lexer.nextToken())
+        try
         {
-            std::cout << token.type << " " << token.value << std::endl;
+            while (Token token = lexer.nextToken())
+            {
+                std::cout << "[" << token.type << "]: " << token.value
+                          << std::endl;
+            }
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << e.what() << std::endl;
         }
     }
     return 0;

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <iostream>
-#include <stdexcept>
 #include <string>
 
 /**
@@ -30,7 +29,7 @@ enum class TokenType
 #define TOKEN_TYPE_PRINT(type)                   \
     case type:                                   \
         os << #type + sizeof("TokenType::") - 1; \
-        return os;
+        break;
 
 inline std::ostream &operator<<(std::ostream &os, const TokenType &type)
 {
@@ -48,7 +47,7 @@ inline std::ostream &operator<<(std::ostream &os, const TokenType &type)
         TOKEN_TYPE_PRINT(TokenType::Slash)
         TOKEN_TYPE_PRINT(TokenType::Unknown)
     }
-    throw std::invalid_argument("Invalid TokenType");
+    return os;
 }
 
 #undef TOKEN_TYPE_PRINT
