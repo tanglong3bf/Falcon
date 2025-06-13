@@ -35,9 +35,10 @@ pri -> Id | Literal | (exp)
 
 ```
 // 补上了分号，没有分号感觉怪怪的
-prog ::= (intDeclare | exp) ";"
-intDeclare ::= "int" Id ( "=" exp )?
-exp ::= or ( "=" exp )?
+prog ::= (intDeclare | assign) ";"
+intDeclare ::= "int" Id ( "=" assign )?
+// exp 改为了 assign，它明显就是赋值操作
+assign ::= or ( "=" assign )?
 or ::= and ( "||" and )*
 and ::= equal ( "&&" equal )*
 equal ::= rel ( ("==" | "!=") rel )*
@@ -45,10 +46,10 @@ rel ::= add ( (">" | "<" | ">=" | "<=") add )*
 add ::= mul ( ("+" | "-") mul )*
 mul ::= pri ( ("*" | "/") pri )*
 // 使用括号来改变优先级
-pri ::= Id | Literal | "(" exp ")"
+pri ::= Id | Literal | "(" assign ")"
 ```
 
-> 注意：`exp ::= or ( "=" exp )?`这一条，可能会导致出现`a || b = c || d`这种语句
+> 注意：`assign ::= or ( "=" assign )?`这一条，可能会导致出现`a || b = c || d`这种语句
 > 被识别为合法的表达式，但实际上左侧明显不能被赋值。
 > 尝试过对其进行修改，但是发现修改后的版本需要回溯，故暂不修改。
 
@@ -58,8 +59,8 @@ pri ::= Id | Literal | "(" exp ")"
 网络上的资料重新编写上述语法规则，可能会是这样：
 
 ```
-intDeclare ::= "int" Id [ "=" exp ] ";"
-exp ::= or [ "=" exp ]
+intDeclare ::= "int" Id [ "=" assign ] ";"
+assign ::= or [ "=" assign ]
 or ::= and { "||" and }
 // ...
 ```

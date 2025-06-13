@@ -23,16 +23,16 @@ class Parser
     }
 
     /**
-     * prog ::= (intDeclare | exp) ";"
-     * intDeclare ::= "int" Id ( "=" exp )?
-     * exp ::= orExp ( "=" exp )?
+     * prog ::= (intDeclare | assign) ";"
+     * intDeclare ::= "int" Id ( "=" assign )?
+     * assign ::= orExp ( "=" assign )?
      * orExp ::= andExp ( "||" andExp )*
      * andExp ::= equalExp ( "&&" equalExp )*
      * equalExp ::= relExp ( ("==" | "!=") relExp )*
      * relExp ::= addExp ( (">" | "<" | ">=" | "<=") addExp )*
      * addExp ::= mulExp ( ("+" | "-") mulExp )*
      * mulExp ::= priExp ( ("*" | "/") priExp )*
-     * priExp ::= Id | Literal | "(" exp ")"
+     * priExp ::= Id | Literal | "(" assign ")"
      */
     ASTNodePtr prog()
     {
@@ -43,14 +43,14 @@ class Parser
         }
         else
         {
-            result = exp();
+            result = assign();
         }
         match(TokenType::Semicolon);
         return result;
     }
 
     /**
-     * intDeclare ::= "int" Id ( "=" exp )?
+     * intDeclare ::= "int" Id ( "=" assign )?
      */
     ASTNodePtr intDeclare()
     {
@@ -67,27 +67,27 @@ class Parser
             // 匹配等号
             match(TokenType::Assignment);
             // 匹配表达式
-            auto expNode = exp();
+            auto assignNode = assign();
             // 将加法表达式作为子节点添加到结果节点中
-            result->addChild(expNode);
+            result->addChild(assignNode);
         }
         return result;
     }
 
     /**
-     * exp ::= orExp ( "=" exp )?
+     * assign ::= orExp ( "=" assign )?
      */
-    ASTNodePtr exp()
+    ASTNodePtr assign()
     {
         auto orNode = orExp();
         if (ahead_.type == TokenType::Assignment)
         {
             match(TokenType::Assignment);
-            auto expNode = exp();
+            auto assignNode = assign();
             auto assignmentNode =
                 std::make_shared<ASTNode>(ASTNodeType::Assignment, "=");
             assignmentNode->addChild(orNode);
-            assignmentNode->addChild(expNode);
+            assignmentNode->addChild(assignNode);
             return assignmentNode;
         }
         return orNode;
@@ -213,7 +213,7 @@ class Parser
     }
 
     /**
-     * priExp ::= Id | Literal | "(" exp ")"
+     * priExp ::= Id | Literal | "(" assign ")"
      */
     ASTNodePtr priExp()
     {
@@ -230,9 +230,9 @@ class Parser
         else if (ahead_.type == TokenType::LParen)
         {
             match(TokenType::LParen);
-            auto expNode = exp();
+            auto assignNode = assign();
             match(TokenType::RParen);
-            return expNode;
+            return assignNode;
         }
         else
         {
