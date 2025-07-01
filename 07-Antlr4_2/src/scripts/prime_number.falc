@@ -1,0 +1,20 @@
+/**
+ * 这个文件完成 100 以内质数的输出
+ * 由于没做生命周期管理，所以，i要提到外面，不然会出现重定义
+ * 由于没做语义分析，没有类型检查，所以，isPrime要声明为int
+ */
+int isPrime = 1;
+int i;
+for (int n = 2; n <= 100; ++n) {
+	isPrime = 1;
+    for (i = 2; i * i <= n; i++) {
+        if (n % i == 0) {
+            isPrime = 0;
+			break;
+        }
+    }
+    if (isPrime) {
+		// 输出
+		n;
+    }
+}

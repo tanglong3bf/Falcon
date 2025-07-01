@@ -1,0 +1,12 @@
+int sum;
+
+for (int i = 1; 
+	 i <= 100;
+	 ++i) {
+	if (i == 50)
+		break;
+	sum += i;
+}
+
+// 输出
+sum;

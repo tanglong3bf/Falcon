@@ -1,0 +1,20 @@
+// 寻找到 a, b, c 中最大的数字
+int a = 10;
+int b = 20;
+int c = 30;
+
+int max;
+
+if (a>b) {
+	if (a>c) {
+		max = a;
+	} else
+		max = c;
+} else if (b>c)
+	max = b;
+else {
+	max = c;
+}
+
+// 输出 max
+max;

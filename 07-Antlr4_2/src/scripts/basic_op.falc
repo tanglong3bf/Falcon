@@ -1,0 +1,118 @@
+int a = +114514;
+a;
+
+int b = -1919810;
+b;
+
+int c = ++a;
+c;
+a;
+
+int d = --b;
+d;
+b;
+
+int e = ~233;
+e;
+
+int f = !0;
+f;
+
+int g = e--;
+g;
+e;
+
+int h = f++;
+h;
+f;
+
+int i = 12 * 3;
+i;
+
+int j = 14 / 3;
+j;
+
+int k = 14 % 3;
+k;
+
+int l = 18 + 11;
+l;
+
+int m = 12 - 9;
+m;
+
+int n = 12 << 2;
+n;
+
+int o = 66 >> 3;
+o;
+
+int p = 3 <= 3;
+p;
+
+int q = 233 >= 123;
+q;
+
+int r = 123 < 233;
+r;
+
+int s = 123 > 233;
+s;
+
+int t = 123 == 123;
+t;
+
+int u = 123 != 233;
+u;
+
+int v = 7 & 9;
+v;
+
+int w = 4 ^ 7;
+w;
+
+int x = 12 | 6;
+x;
+
+int y = -1 && 0;
+y;
+
+int z = 0 || 23;
+z;
+
+int aa = 28 >= 18 ? 666 : 555;
+aa;
+
+int one = 1;
+int two = 2;
+int three = 3;
+int four = 4;
+int five = 5;
+int six = 6;
+int seven = 7;
+int eight = 8;
+int nine = 9;
+int ten = 10;
+
+nine = six;
+three += two;
+ten -= four;
+eight *= three;
+seven /= two;
+eight &= five;
+nine |= two;
+five ^= three;
+one <<= two;
+six >>= two;
+nine %= three;
+
+one; // 4
+two; // 2
+three; // 5
+four; // 4
+five; // 0
+six; // 1
+seven; // 3
+eight; // 0
+nine; // 1
+ten; // 6
