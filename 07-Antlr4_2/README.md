@@ -27,8 +27,6 @@ sudo apt-get install antlr4-runtime-cpp-dev
 
 基本数据类型只支持 int。（本来打算支持好多好多类型的，但是好麻烦，就暂时放弃了）
 
-数组类型（未完成）： int\[10\] a; int\[\] b = {1, 2, 3};
-
 ### 运算符
 
 基础的双目运算符：+, -, \*, /, %, <<, >>, ==, !=, >, <, >=, <=, &, |, ^, &&, ||, =, +=, -=, \*=, /=, %=, <<=, >>=, &=, |=, ^=
@@ -42,7 +40,7 @@ sudo apt-get install antlr4-runtime-cpp-dev
 ### 语句
 
 1. if-else语句：if (expr) { stmt } else { stmt }
-2. for语句：for (init; expr; update) { stmt }，for (item : collection)
+2. for语句：for (init; expr; update) { stmt }
 3. while语句：while (expr) { stmt }
 4. do-while语句：do { stmt } while (expr);
 5. switch语句（未完成）：switch (expr) { case value1: stmt; break; case value2: stmt; break; default: stmt; }
@@ -169,7 +167,9 @@ $ tree .
 
 我在实现的过程中，本来打算实现好多好多语法，但是发现有点力不从心。
 
-我定义了一个类，FalconAny 继承自 antlrcpp::Any，然后实现了一大坨的运算符重载，这样expression节点的解析会很方便。
+~~我定义了一个类，FalconVariable 继承自 antlrcpp::Any，然后实现了一大坨的运算符重载，这样expression节点的解析会很方便。~~
+
+**从原本的自定义类型修改为直接使用 antlrcpp::Any 类型。**
 
 我一开始打算实现好多好多数据类型，甚至专门实现了一个枚举，具体可以看：
 
@@ -184,13 +184,13 @@ enum class FalconType
 
 当然，有点后知后觉的发现，这其实属于语义分析。。。
 
-本来也打算实现数组定义的，但是没想好怎么存储数组的数据，毕竟不打算限制数组的维数。
+~~同时 `MyVisitor` 的 `variables_` 也需要修改，暂时放弃了。~~
 
-同时 `MyVisitor` 的 `variables_` 也需要修改，暂时放弃了。
+已经修改为直接存储 `antlrcpp::Any` 类型。
 
 考虑到类 `FalconScriptBaseVisitor` 的定义，会随着我修改\*.g4文件而发生变化，前面也说过要把这些中间文件放到.gitignore里，所以需要继承 `FalconScriptBaseVisitor`，在子类中重写我们自己的实现。
 
-实现过程中，我最早实现的是`visitExpression()`，这里就会用到FalconAny类的运算符重载。
+实现过程中，我最早实现的是`visitExpression()`~~，这里就会用到FalconAny类的运算符重载~~。
 
 逐步往后实现的过程中，越来越得心应手，但是到了for循环的时候卡壳了，
 
@@ -204,7 +204,9 @@ enhancedForControl 节点实质上是在遍历数组，之前已经删掉了数�
 
 最后实现visitStatement()，又删了switch-case
 
-预计此目录会再更新几次，把数组、范围for循环都实现一下。
+~~预计此目录会再更新几次，把数组、范围for循环都实现一下。~~
+
+放弃了。。。
 
 switch-case……看情况吧。
 
