@@ -36,7 +36,7 @@ $(GEN_DIR)/$(OBJ_DIR)/%.o: $(GEN_DIR)/%.cpp $(GEN_DIR)/%.h
 
 # main.o特殊处理
 $(GEN_DIR)/$(OBJ_DIR)/main.o: main.cc $(GEN_DIR)/FalconScriptLexer.h\
-	$(GEN_DIR)/FalconScriptParser.h MyVisitor.hpp FalconAny.hpp
+	$(GEN_DIR)/FalconScriptParser.h MyVisitor.hpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # antlr4生成规则

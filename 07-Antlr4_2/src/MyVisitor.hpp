@@ -2,15 +2,36 @@
 
 #include <cstdlib>
 #include "./generated/FalconScriptBaseVisitor.h"
-#include "FalconAny.hpp"
 #include <sstream>
 
 /**
  * 普通二元运算符
  */
-#define BINARY_OPERATOR(op_name, op)  \
-    case FalconScriptParser::op_name: \
-        result = left op right;       \
+#define BINARY_OPERATOR(op_name, op)                                          \
+    case FalconScriptParser::op_name:                                         \
+        if (left.is<int>() && right.is<int>())                                \
+        {                                                                     \
+            result = static_cast<int32_t>(left.as<int>() op right.as<int>()); \
+        }                                                                     \
+        else if (left.is<int>() && right.is<int *>())                         \
+        {                                                                     \
+            result =                                                          \
+                static_cast<int32_t>(left.as<int>() op * right.as<int *>());  \
+        }                                                                     \
+        else if (left.is<int *>() && right.is<int>())                         \
+        {                                                                     \
+            result =                                                          \
+                static_cast<int32_t>(*left.as<int *>() op right.as<int>());   \
+        }                                                                     \
+        else if (left.is<int *>() && right.is<int *>())                       \
+        {                                                                     \
+            result = static_cast<int32_t>(*left.as<int *>() op *              \
+                                          right.as<int *>());                 \
+        }                                                                     \
+        else                                                                  \
+        {                                                                     \
+            throw std::runtime_error("类型不匹配");                           \
+        }                                                                     \
         break
 
 /**
@@ -18,23 +39,59 @@
  *
  * 如果是repl模式且不在循环中，则输出变量的新值
  */
-#define ASSIGN_OPERATOR(op_name, op)                                        \
-    case FalconScriptParser::op_name:                                       \
-        variables_[leftName] op right.as<int>();                            \
-        result = variables_[leftName];                                      \
-        if (isRepl_ && loopDepth_ == 0)                                     \
-        {                                                                   \
-            std::cout << leftName << ": " << result.as<int>() << std::endl; \
-        }                                                                   \
+#define ASSIGN_OPERATOR(op_name, op)                                          \
+    case FalconScriptParser::op_name:                                         \
+        if (left.is<int32_t>())                                               \
+        {                                                                     \
+            throw std::runtime_error("赋值号左侧不能为字面量");               \
+        }                                                                     \
+        if (right.is<int32_t>())                                              \
+        {                                                                     \
+            result = static_cast<int32_t>(*left.as<int32_t *>()               \
+                                               op right.as<int32_t>());       \
+        }                                                                     \
+        else if (right.is<int32_t *>())                                       \
+        {                                                                     \
+            result = static_cast<int32_t>(*left.as<int32_t *>() op *          \
+                                          right.as<int32_t *>());             \
+        }                                                                     \
+        else                                                                  \
+        {                                                                     \
+            throw std::runtime_error("类型不匹配");                           \
+        }                                                                     \
+        if (isRepl_ && loopDepth_ == 0)                                       \
+        {                                                                     \
+            std ::cout << leftName << ": " << result.as<int>() << std ::endl; \
+        }                                                                     \
         break
 
 /**
  * 前缀运算符
  */
-#define PREFIX_UNARY_OPERATOR(op_name, op) \
-    case FalconScriptParser::op_name:      \
-        result = op child;                 \
+#define PREFIX_UNARY_OPERATOR(op_name, op)                             \
+    case FalconScriptParser::op_name:                                  \
+        if (child.is<int32_t>())                                       \
+        {                                                              \
+            result = static_cast<int32_t>(op child.as<int32_t>());     \
+        }                                                              \
+        else if (child.is<int32_t *>())                                \
+        {                                                              \
+            result = static_cast<int32_t>(op * child.as<int32_t *>()); \
+        }                                                              \
+        else                                                           \
+        {                                                              \
+            throw std::runtime_error("类型不匹配");                    \
+        }                                                              \
         break
+
+/**
+ * 支持的变量类型
+ */
+enum class FalconType
+{
+    Integer,  ///< int32_t*
+    Array,  ///< std::vector<antlrcpp::Any>* // 可能直接存储数字，可能有子数组
+};
 
 /**
  * 一些用于控制流程的语句
@@ -59,14 +116,14 @@ class MyVisitor : public FalconScriptBaseVisitor
     virtual antlrcpp::Any visitProg(
         FalconScriptParser::ProgContext *ctx) override
     {
-        try
-        {
-            visitChildren(ctx);
-        }
-        catch (std::exception &e)
-        {
-            std::cout << "Error: " << e.what() << std::endl;
-        }
+        // try
+        // {
+        visitChildren(ctx);
+        // }
+        // catch (std::exception &e)
+        // {
+        //     std::cout << "Error: " << e.what() << std::endl;
+        // }
         return nullptr;
     }
 
@@ -118,7 +175,16 @@ class MyVisitor : public FalconScriptBaseVisitor
         }
         else if (ctx->IF())
         {
-            auto condition = visitParExpression(ctx->parExpression()).as<int>();
+            int32_t condition;
+            auto value = visitParExpression(ctx->parExpression());
+            if (value.is<int32_t>())
+            {
+                condition = value.as<int32_t>();
+            }
+            else if (value.is<int32_t *>())
+            {
+                condition = *value.as<int32_t *>();
+            }
             if (condition != 0)
             {
                 return visitStatement(ctx->statement(0));
@@ -260,8 +326,9 @@ class MyVisitor : public FalconScriptBaseVisitor
             // 类似于 a; 的语句，输出变量的值
             if (ctx->statementExpression->primary())
             {
+                assert(result.is<int32_t *>());
                 std::cout << ctx->statementExpression->getText() << ": "
-                          << result.as<int>() << std::endl;
+                          << *result.as<int *>() << std::endl;
             }
             else if (ctx->statementExpression->bop != nullptr)
             {
@@ -294,21 +361,25 @@ class MyVisitor : public FalconScriptBaseVisitor
         return nullptr;
     }
 
-    virtual antlrcpp::Any visitExpression(
+    virtual antlrcpp::Any /* int32_t, int32_t* */ visitExpression(
         FalconScriptParser::ExpressionContext *ctx) override
     {
         // 缓存所有的表达式结果
         antlrcpp::Any result;
         if (ctx->primary())
         {
-            result = visitPrimary(ctx->primary());
+            result /* int32_t, int32_t* */ = visitPrimary(ctx->primary());
         }
         // 双目运算符
         else if (ctx->bop != nullptr && ctx->expression().size() == 2)
         {
             // 获取左右表达式的结果
-            FalconVariable left(visitExpression(ctx->expression(0)));
-            FalconVariable right(visitExpression(ctx->expression(1)));
+            antlrcpp::Any left(visitExpression(ctx->expression(0)));
+            antlrcpp::Any right(visitExpression(ctx->expression(1)));
+            assert(left.is<int32_t>() ||
+                   left.is<int32_t *>() && left.as<int32_t *>() != nullptr);
+            assert(right.is<int32_t>() ||
+                   right.is<int32_t *>() && right.as<int32_t *>() != nullptr);
 
             std::string leftName;
             // 根据运算符类型进行计算
@@ -360,46 +431,39 @@ class MyVisitor : public FalconScriptBaseVisitor
         // 前置单目运算符
         else if (ctx->prefix != nullptr && ctx->expression().size() == 1)
         {
-            FalconVariable child(visitExpression(ctx->expression(0)));
-            std::string varName;
+            antlrcpp::Any child(visitExpression(ctx->expression(0)));
             switch (ctx->prefix->getType())
             {
                 PREFIX_UNARY_OPERATOR(PLUS, +);
                 PREFIX_UNARY_OPERATOR(MINUS, -);
                 PREFIX_UNARY_OPERATOR(NOT, !);
                 PREFIX_UNARY_OPERATOR(NEGATE, ~);
-                default:
-                    varName =
-                        ctx->expression(0)->primary()->IDENTIFIER()->getText();
-                    break;
             }
             switch (ctx->prefix->getType())
             {
                 case FalconScriptParser::INCREMENT:
-                    result = child + FalconVariable(1);
-                    variables_[varName] = result.as<int>();
+                    assert(child.is<int32_t *>());
+                    result = ++*child.as<int32_t *>();
                     break;
                 case FalconScriptParser::DECREMENT:
-                    result = child - FalconVariable(1);
-                    variables_[varName] = result.as<int>();
+                    assert(child.is<int32_t *>());
+                    result = --*child.as<int32_t *>();
                     break;
             }
         }
         // 后置单目运算符
         else if (ctx->postfix != nullptr)
         {
-            FalconVariable child(visitExpression(ctx->expression(0)));
-            const auto &varName =
-                ctx->expression(0)->primary()->IDENTIFIER()->getText();
+            antlrcpp::Any child(visitExpression(ctx->expression(0)));
             switch (ctx->postfix->getType())
             {
                 case FalconScriptParser::INCREMENT:
-                    result = child;
-                    variables_[varName] = result.as<int>() + 1;
+                    assert(child.is<int32_t *>());
+                    result = (*child.as<int32_t *>())++;
                     break;
                 case FalconScriptParser::DECREMENT:
-                    result = child;
-                    variables_[varName] = result.as<int>() - 1;
+                    assert(child.is<int32_t *>());
+                    result = (*child.as<int32_t *>())--;
                     break;
             }
         }
@@ -407,7 +471,8 @@ class MyVisitor : public FalconScriptBaseVisitor
         else if (ctx->bop != nullptr && ctx->expression().size() == 3 &&
                  ctx->bop->getType() == FalconScriptParser::TERNARY)
         {
-            FalconVariable cond(visitExpression(ctx->expression(0)));
+            antlrcpp::Any cond(visitExpression(ctx->expression(0)));
+            assert(cond.is<int32_t>());
             if (cond.as<int32_t>() != 0)
             {
                 result = visitExpression(ctx->expression(1));
@@ -421,8 +486,8 @@ class MyVisitor : public FalconScriptBaseVisitor
         return result;
     }
 
-    virtual antlrcpp::Any visitPrimary(
-        FalconScriptParser::PrimaryContext *ctx) override
+    virtual antlrcpp::Any /* @see visitExpression, int32_t, int32_t* */
+    visitPrimary(FalconScriptParser::PrimaryContext *ctx) override
     {
         if (ctx->L_PAREN() && ctx->R_PAREN())
         {
@@ -449,13 +514,13 @@ class MyVisitor : public FalconScriptBaseVisitor
         }
     }
 
-    virtual antlrcpp::Any visitLiteral(
+    virtual antlrcpp::Any /* int32_t */ visitLiteral(
         FalconScriptParser::LiteralContext *ctx) override
     {
         return visitIntegerLiteral(ctx->integerLiteral());
     }
 
-    virtual antlrcpp::Any visitIntegerLiteral(
+    virtual antlrcpp::Any /* int32_t */ visitIntegerLiteral(
         FalconScriptParser::IntegerLiteralContext *ctx) override
     {
         if (ctx->DECIMAL_LITERAL())
@@ -479,17 +544,17 @@ class MyVisitor : public FalconScriptBaseVisitor
         }
     }
 
-    virtual antlrcpp::Any visitTypeType(
+    virtual antlrcpp::Any /* FalconType */ visitTypeType(
         FalconScriptParser::TypeTypeContext *ctx) override
     {
         if (ctx->primitiveType())
         {
             return visitPrimitiveType(ctx->primitiveType());
         }
-        return nullptr;
+        throw std::runtime_error("未知类型");
     }
 
-    virtual antlrcpp::Any visitPrimitiveType(
+    virtual antlrcpp::Any /* FalconType */ visitPrimitiveType(
         FalconScriptParser::PrimitiveTypeContext *ctx) override
     {
         if (ctx->INT())
@@ -499,7 +564,7 @@ class MyVisitor : public FalconScriptBaseVisitor
         return nullptr;
     }
 
-    virtual antlrcpp::Any visitVariableDeclarators(
+    virtual antlrcpp::Any /* std::nullptr_t */ visitVariableDeclarators(
         FalconScriptParser::VariableDeclaratorsContext *ctx) override
     {
         for (auto declarator : ctx->variableDeclarator())
@@ -509,7 +574,7 @@ class MyVisitor : public FalconScriptBaseVisitor
         return nullptr;
     }
 
-    virtual antlrcpp::Any visitVariableDeclarator(
+    virtual antlrcpp::Any /* std::nullptr_t */ visitVariableDeclarator(
         FalconScriptParser::VariableDeclaratorContext *ctx) override
     {
         auto varName /*:string*/ =
@@ -525,7 +590,7 @@ class MyVisitor : public FalconScriptBaseVisitor
         {
             value = visitVariableInitializer(ctx->variableInitializer());
         }
-        variables_[varName.as<std::string>()] = value;
+        variables_[varName.as<std::string>()] = new int(value);
         // 新定义的变量输出一下
         if (isRepl_ && loopDepth_ == 0)
         {
@@ -536,25 +601,25 @@ class MyVisitor : public FalconScriptBaseVisitor
         return nullptr;
     }
 
-    virtual antlrcpp::Any visitVariableDeclaratorId(
+    virtual antlrcpp::Any /* std::string (标识符) */ visitVariableDeclaratorId(
         FalconScriptParser::VariableDeclaratorIdContext *ctx) override
     {
         return ctx->IDENTIFIER()->getText();
     }
 
-    virtual antlrcpp::Any visitVariableInitializer(
+    virtual antlrcpp::Any /* @see visitExpression */ visitVariableInitializer(
         FalconScriptParser::VariableInitializerContext *ctx) override
     {
         return visitExpression(ctx->expression());
     }
 
-    virtual antlrcpp::Any visitParExpression(
+    virtual antlrcpp::Any /* @see visitExpression */ visitParExpression(
         FalconScriptParser::ParExpressionContext *ctx) override
     {
         return visitExpression(ctx->expression());
     }
 
-    virtual antlrcpp::Any visitForInit(
+    virtual antlrcpp::Any /* std::nullptr_t */ visitForInit(
         FalconScriptParser::ForInitContext *ctx) override
     {
         if (ctx->variableDeclarators())
@@ -568,7 +633,7 @@ class MyVisitor : public FalconScriptBaseVisitor
         return nullptr;
     }
 
-    virtual antlrcpp::Any visitExpressionList(
+    virtual antlrcpp::Any /* std::nullptr_t */ visitExpressionList(
         FalconScriptParser::ExpressionListContext *ctx) override
     {
         for (auto expression : ctx->expression())
@@ -579,14 +644,19 @@ class MyVisitor : public FalconScriptBaseVisitor
     }
 
   private:
-    static std::unordered_map<std::string, int> variables_;
+    /**
+     * 可能的类型：int32_t*, std::vector<antlrcpp::Any>
+     * 数组内部也是存储上述两种类型
+     */
+    static std::unordered_map<std::string, antlrcpp::Any> variables_;
     /// isRepl_ 是否处于REPL模式
     const bool isRepl_;
     /// loopDepth_ 记录当前所在的循环层级
     int loopDepth_;
 };
 
-inline std::unordered_map<std::string, int> MyVisitor::variables_ = {};
+inline std::unordered_map<std::string, antlrcpp::Any> MyVisitor::variables_ =
+    {};
 
 #undef BINARY_OPERATOR
 #undef PREFIX_UNARY_OPERATOR
