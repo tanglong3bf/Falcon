@@ -1,0 +1,22 @@
+/**
+ * 这个文件完成 100 以内质数的输出
+ * 由于没有支持太多的类型，所以，isPrime要声明为int
+ */
+int isPrime = 1;
+for (int n = 2; n <= 100; ++n)
+{
+	isPrime = 1;
+    for (int i = 2; i * i <= n; i++)
+	{
+        if (n % i == 0)
+		{
+            isPrime = 0;
+			break;
+        }
+    }
+    if (isPrime)
+	{
+		// 输出
+		n;
+    }
+}
